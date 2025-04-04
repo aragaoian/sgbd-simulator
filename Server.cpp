@@ -7,6 +7,7 @@
 #include <vector>
 using namespace std;
 
+#define MAX_THREADS 16
 #define BUFFER_SIZE 1500
 #define MAX_ARGS 10
 
@@ -56,25 +57,120 @@ vector<Arg> tokenize(const string &buf) {
     return args;
 }
 
+typedef struct {
+    char buffer[BUFFER_SIZE];
+} Task;
+
 class Server {
   public:
-    Server(int fdRead) : fdRead(fdRead) {}
+    Server(int fdRead) : fdRead(fdRead) {
+        pthread_mutex_init(&logMutex, NULL);
+        pthread_mutex_init(&queueMutex, NULL);
+        pthread_cond_init(&newTaskCondition, NULL);
+
+        for (int i = 0; i < MAX_THREADS; ++i) {
+            cout << "Creating thread " << i << endl;
+            threadPool[i] = thread(&Server::worker, this);
+        }
+    }
+
+    ~Server() {
+        pthread_mutex_lock(&queueMutex);
+        isShuttingDown = true;
+        pthread_cond_broadcast(&newTaskCondition); // wake up all waiting threads
+        pthread_mutex_unlock(&queueMutex);
+
+        for (int i = 0; i < MAX_THREADS; ++i) {
+            cout << "Joining thread " << i << endl;
+            threadPool[i].join();
+        }
+        pthread_mutex_destroy(&logMutex);
+        pthread_mutex_destroy(&queueMutex);
+        pthread_cond_destroy(&newTaskCondition);
+    }
 
     void start() {
+
         while (1) {
-            char buffer[128];
-            ssize_t n = read(fdRead, buffer, sizeof(buffer) - 1);
-            if (n > 0) {
-                buffer[n] = '\0'; // Null-terminate the string
-                thread(&Server::handleClient, this, buffer).detach();
+            int len = 0;                                 // tamanho da mensagem
+            ssize_t n = read(fdRead, &len, sizeof(int)); // lê o tamanho da próxima mensagem
+            if (n < 0) {
+                perror("Error reading message size");
+                break;
             }
+            if (n == 0) {
+                cout << "Client disconnected" << endl;
+                break;
+            }
+
+            if (len <= 0 || len >= BUFFER_SIZE) {
+                cerr << "Invalid message length: " << len << endl;
+                continue;
+            }
+
+            char buffer[BUFFER_SIZE];
+            ssize_t totalRead = 0;
+            while (totalRead < len) {
+                // buffer aponta para o inicio da mensagem, estamos tamanho - lido bytes a partir de inicio + lido
+                ssize_t bytesRead = read(fdRead, buffer + totalRead, len - totalRead);
+                if (bytesRead <= 0) {
+                    perror("Error reading message body");
+                    break;
+                }
+                totalRead += bytesRead;
+            }
+
+            buffer[len] = '\0';
+
+            pthread_mutex_lock(&queueMutex);
+            Task task;
+            strncpy(task.buffer, buffer, sizeof(task.buffer) - 1);
+            task.buffer[sizeof(task.buffer) - 1] = '\0';
+            queue.push_back(task);
+            pthread_cond_signal(&newTaskCondition);
+            pthread_mutex_unlock(&queueMutex);
         }
     }
 
   private:
+    thread threadPool[MAX_THREADS];
     CommandHandler commandHandler;
     int fdRead;
     pthread_mutex_t logMutex;
+    pthread_mutex_t queueMutex;
+    pthread_cond_t newTaskCondition;
+    vector<Task> queue;
+    bool isShuttingDown = false;
+
+    void *worker() {
+        while (1) {
+            pthread_mutex_lock(&queueMutex);
+
+            while (queue.empty() && !isShuttingDown) {
+                pthread_cond_wait(&newTaskCondition, &queueMutex);
+            }
+
+            if (isShuttingDown && queue.empty()) {
+                pthread_mutex_unlock(&queueMutex);
+                break;
+            }
+
+            // Pega a tarefa da fila
+            Task task = queue.front();
+            queue.erase(queue.begin());
+            pthread_mutex_unlock(&queueMutex);
+
+            string msg = "Processing task: " + string(task.buffer) + " on thread " + to_string(pthread_self());
+            if (string(task.buffer) == "insert id=1 nome='Ian'") {
+                sleep(4);
+            }
+            cout << msg << endl;
+
+            handleClient(task.buffer);
+        }
+
+        return NULL;
+    }
 
     void *handleClient(char *buffer) {
         string command(buffer);

@@ -2,14 +2,21 @@
 #include "Server.cpp"
 #include <iostream>
 
-// Criar diversos clients - Ian
 // Os clients devem mandar as mensagens automaticamente (seria legal se fosse aleatoriamente) - Ian
-// Implementar delete, update, select, select_all - Lucas
+// Implementar delete, update, select, select_all - Duda
 
 using namespace std;
 
+void sendMessage(int fd, const string &message) {
+    int len = message.size();
+    write(fd, &len, sizeof(int));    // envia o tamanho
+    write(fd, message.c_str(), len); // envia a mensagem
+}
+
 int main(int argc, char *argv[]) {
     int fd[2];
+    // fd[0] -> leitura
+    // fd[1] -> escrita
     pid_t pid;
 
     if (pipe(fd) == -1) {
@@ -30,9 +37,10 @@ int main(int argc, char *argv[]) {
         server.start();
         close(fd[0]);
     } else {
-        close(fd[0]); // Fecha a leitura
-        const char *msg = "insert id=2 nome='Lucas'";
-        write(fd[1], msg, strlen(msg));
+        close(fd[0]);
+        sendMessage(fd[1], "insert id=1 nome='Ian'");
+        sendMessage(fd[1], "insert id=2 nome='Lucas'");
+        sendMessage(fd[1], "insert id=3 nome='Duda'");
         close(fd[1]);
     }
 
