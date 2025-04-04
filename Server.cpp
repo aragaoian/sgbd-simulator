@@ -58,76 +58,44 @@ vector<Arg> tokenize(const string &buf) {
 
 class Server {
   public:
-    Server(int port) : port(port) {}
+    Server(int fdRead) : fdRead(fdRead) {}
 
     void start() {
-        setupSocket();
-        listenForClients();
+        while (1) {
+            char buffer[128];
+            ssize_t n = read(fdRead, buffer, sizeof(buffer) - 1);
+            if (n > 0) {
+                buffer[n] = '\0'; // Null-terminate the string
+                thread(&Server::handleClient, this, buffer).detach();
+            }
+        }
     }
 
   private:
-    int port;
-    int serverSd;
-    sockaddr_in servAddr;
     CommandHandler commandHandler;
+    int fdRead;
+    pthread_mutex_t logMutex;
 
-    void setupSocket() {
-        serverSd = socket(AF_INET, SOCK_STREAM, 0); // socket ID
-        if (serverSd < 0) {
-            cerr << "Error establishing the server socket" << endl;
-            exit(EXIT_FAILURE);
-        }
+    void *handleClient(char *buffer) {
+        string command(buffer);
+        vector<Arg> args = tokenize(buffer);
 
-        bzero((char *)&servAddr, sizeof(servAddr));   // initialize servAddr
-        servAddr.sin_family = AF_INET;                // IPv4
-        servAddr.sin_addr.s_addr = htonl(INADDR_ANY); // Accept multiple address'
-        servAddr.sin_port = htons(port);
+        if (args.empty()) return NULL;
 
-        if (bind(serverSd, (struct sockaddr *)&servAddr, sizeof(servAddr)) < 0) {
-            cerr << "Error binding socket to local address" << endl;
-            exit(EXIT_FAILURE);
-        }
-    }
+        string response = commandHandler.executeCommand(args[0].name, args.size(), args);
 
-    void listenForClients() {
-        unsigned int num_threads = thread::hardware_concurrency();
-        listen(serverSd, num_threads);
-        cout << "Waiting for clients..." << endl;
-        // receive a request from client using accept
-        // we need a new address to connect with the client
+        time_t now = time(NULL);                                            // get current time
+        tm *ltm = localtime(&now);                                          // convert to local time
+        char timeBuffer[80];                                                // buffer for time string
+        strftime(timeBuffer, sizeof(timeBuffer), "%Y-%m-%d %H:%M:%S", ltm); // format time
+        string timeString(timeBuffer);                                      // convert to string
 
-        socklen_t addrlen = sizeof(servAddr);
-        while (1) {
-            int new_socket = accept(serverSd, (struct sockaddr *)&servAddr, &addrlen);
-            if (new_socket < 0) {
-                cerr << "Error accepting request from client!" << endl;
-                exit(1);
-            }
-            cout << "Client connected!" << endl;
-            thread(&Server::handleClient, this, new_socket).detach();
-        }
-    }
-
-    void *handleClient(int sock) {
-
-        char buffer[BUFFER_SIZE];
-
-        while (1) {
-            memset(buffer, 0, BUFFER_SIZE); // clear the buffer
-            int bytesRead = recv(sock, buffer, BUFFER_SIZE, 0);
-            if (bytesRead <= 0) break;
-
-            // split the buffer into command and arguments
-
-            vector<Arg> args = tokenize(buffer);
-
-            if (args.empty()) continue;
-
-            string response = commandHandler.executeCommand(args[0].name, args.size(), args);
-            send(sock, response.c_str(), response.length(), 0);
-        }
-
-        close(sock);
+        // put response in log.txt
+        pthread_mutex_lock(&logMutex);
+        ofstream logFile("log.txt", ios::app);
+        logFile << timeString << " - " << command << ": " << response;
+        logFile.close();
+        pthread_mutex_unlock(&logMutex);
         return NULL;
     }
 };

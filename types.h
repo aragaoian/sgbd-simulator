@@ -7,7 +7,7 @@ typedef struct {
     string nome;
 } Registro;
 
-typedef struct Arg {
+typedef struct {
     string name;
     string value;
-};
+} Arg;

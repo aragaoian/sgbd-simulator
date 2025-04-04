@@ -23,7 +23,6 @@ vector<string> splitString(const string &str, char delimiter) {
 
 class Database {
   private:
-    string dbName;
     vector<Registro> records;
     pthread_mutex_t dbMutex;
     const string filename = "database.db";
