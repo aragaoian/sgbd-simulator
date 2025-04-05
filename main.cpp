@@ -1,5 +1,5 @@
-// #include "Client.cpp"
 #include "Server.cpp"
+#include "Client.cpp"
 #include <iostream>
 
 // Os clients devem mandar as mensagens automaticamente (seria legal se fosse aleatoriamente) - Ian
@@ -30,17 +30,16 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    if (pid != 0) {
+    if (pid != 0) { // pFilho
         cout << "Server started" << endl;
         close(fd[1]);
         Server server(fd[0]);
         server.start();
         close(fd[0]);
-    } else {
+    } else { // pPai
         close(fd[0]);
-        sendMessage(fd[1], "insert id=1 nome='Ian'");
-        sendMessage(fd[1], "insert id=2 nome='Lucas'");
-        sendMessage(fd[1], "insert id=3 nome='Duda'");
+        Client client(fd[0], fd[1], pid);
+        client.start();
         close(fd[1]);
     }
 

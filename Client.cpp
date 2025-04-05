@@ -1,76 +1,80 @@
 #include <iostream>
-#include <netdb.h>
-#include <netinet/in.h>
 #include <string.h>
-#include <thread>
 #include <unistd.h>
+#include <string>
+#include <sstream>
+#include <vector>
+#include <cstdlib>
+#include "Names.h"
 using namespace std;
 
 #define BUFFER_SIZE 1500
+#define COMMAND_MAX 8
+#define COLUMN_MAX 2
+#define VALUE_MAX 100
+
 
 class Client {
   public:
-    Client(int port, const char *hostName) : port(port), hostName(hostName) {}
+    Client(int fdRead, int fdWrite, int clientId) : fdRead(fdRead), 
+                                                    fdWrite(fdWrite), 
+                                                    clientId(clientId) {}
 
     void start() {
-        if (serverConnect()) {
-            sendData();
+        // clientResponse(fdRead);
+        sendMessage(fdWrite, commandList[commandId]);
+    }
+
+    static string buildString(const vector <string> &prefix, bool isNumber, bool isBoth) {
+
+        /*
+        Parameters:
+            prefix -> vetor para guardar o(s) prefixo(s)
+            isNumber -> true (int) | false (string)
+            isBoth -> true (tanto int como string) | false (nada)
+        */
+
+        std::stringstream ss;
+        string id = to_string(rand() % VALUE_MAX);
+        string name = namesArray[rand() % VALUE_MAX];
+  
+        if(!isBoth){
+            ss << prefix[0];
+            if (isNumber) {
+                ss << id;
+            } else {
+                ss << "'" << name << "'";
+            }
+        }else{
+            ss << prefix[0] << id << prefix[1] << "'" << name << "'";
         }
+    
+        return ss.str();
     }
 
   private:
-    int port;
-    int serverSd;
-    string hostName;
-    sockaddr_in servAddr;
-    struct hostent *server; // hostent to store host info
-    char buffer[BUFFER_SIZE];
+    int fdRead;
+    int fdWrite;
+    int clientId;
+    int commandId = rand() % (COMMAND_MAX-6);
+    string commandList[COMMAND_MAX] = {
+        "SELECT * FROM Table",
+        []() { return buildString({"insert id=", " nome="}, false, true); }(),
+        // []() { return buildString({"select nome where id="}, true, false); }(),
+        // []() { return buildString({"select id where nome="}, false, false); }(),
+        // []() { return buildString({"delete where nome="}, false, false); }(),
+        // []() { return buildString({"delete where id="}, true, false); }(),
+        // []() { return buildString({"update nome="}, false, false); }(),
+        // []() { return buildString({"update id="}, true, false); }()
+    };
 
-    bool serverConnect() {
-        serverSd = socket(AF_INET, SOCK_STREAM, 0); // socket ID
-        if (serverSd < 0) {
-            cerr << "Error establishing the server socket" << endl;
-            exit(EXIT_FAILURE);
-            return false;
-        }
-
-        server = gethostbyname(hostName.c_str());
-        if (server == NULL) {
-            cerr << "Host not found" << endl;
-            exit(EXIT_FAILURE);
-            return false;
-        }
-
-        bzero((char *)&servAddr, sizeof(servAddr));
-        servAddr.sin_family = AF_INET;
-        memcpy(&servAddr.sin_addr.s_addr, server->h_addr, server->h_length); // copy server IP adress
-        servAddr.sin_port = htons(port);
-
-        if (connect(serverSd, (struct sockaddr *)&servAddr, sizeof(servAddr)) < 0) {
-            cerr << "Error connecting to the server socket" << endl;
-            exit(EXIT_FAILURE);
-            return false;
-        }
-
-        return true;
+    void sendMessage(int fd, const string &message) {
+        int len = message.size();
+        write(fd, &len, sizeof(int));    // envia o tamanho
+        write(fd, message.c_str(), len); // envia a mensagem
     }
 
-    void sendData() {
-        bzero(buffer, BUFFER_SIZE);
-        fgets(buffer, BUFFER_SIZE - 1, stdin);
-
-        int wordLenght = write(serverSd, buffer, strlen(buffer));
-        if (wordLenght <= 0) {
-            cerr << "Error writing to the server socket" << endl;
-        }
-        bzero(buffer, BUFFER_SIZE);
-
-        int responseLenght = read(serverSd, buffer, BUFFER_SIZE - 1);
-        if (responseLenght <= 0) {
-            cerr << "Error reading from the server socket" << endl;
-        }
-
-        cout << "Server: " << buffer << endl;
-        close(serverSd);
+    void clientResponse(int fd){
+        return;
     }
 };
