@@ -63,7 +63,7 @@ typedef struct {
 
 class Server {
   public:
-    Server(int fdRead) : fdRead(fdRead) {
+    Server(int fdRead, int fdWrite) : fdRead(fdRead), fdWrite(fdWrite) {
         pthread_mutex_init(&logMutex, NULL);
         pthread_mutex_init(&queueMutex, NULL);
         pthread_cond_init(&newTaskCondition, NULL);
@@ -136,6 +136,7 @@ class Server {
     thread threadPool[MAX_THREADS];
     CommandHandler commandHandler;
     int fdRead;
+    int fdWrite;
     pthread_mutex_t logMutex;
     pthread_mutex_t queueMutex;
     pthread_cond_t newTaskCondition;

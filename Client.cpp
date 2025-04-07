@@ -21,10 +21,14 @@ class Client {
                                                     fdWrite(fdWrite), 
                                                     clientId(clientId) {}
 
-    void start() {
+    void start(bool userInput=false, string userMessage=NULL) {
         for(int i = 0; i < rand() % REQ_MAX; i++){
-            // clientResponse(fdRead);
-            sendMessage(fdWrite, commandList[commandId]);
+            if(!userInput){
+                // clientResponse(fdRead);
+                sendMessage(fdWrite, commandList[commandId]);
+            }else{
+                sendMessage(fdWrite, userMessage);
+            }
         }
     }
 
