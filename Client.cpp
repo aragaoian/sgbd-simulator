@@ -9,9 +9,10 @@
 using namespace std;
 
 #define BUFFER_SIZE 1500
+#define VALUE_MAX 100
+#define REQ_MAX 16
 #define COMMAND_MAX 8
 #define COLUMN_MAX 2
-#define VALUE_MAX 100
 
 
 class Client {
@@ -21,8 +22,10 @@ class Client {
                                                     clientId(clientId) {}
 
     void start() {
-        // clientResponse(fdRead);
-        sendMessage(fdWrite, commandList[commandId]);
+        for(int i = 0; i < rand() % REQ_MAX; i++){
+            // clientResponse(fdRead);
+            sendMessage(fdWrite, commandList[commandId]);
+        }
     }
 
     static string buildString(const vector <string> &prefix, bool isNumber, bool isBoth) {
@@ -58,7 +61,7 @@ class Client {
     int clientId;
     int commandId = rand() % (COMMAND_MAX-6);
     string commandList[COMMAND_MAX] = {
-        "SELECT * FROM Table",
+        "select_all",
         []() { return buildString({"insert id=", " nome="}, false, true); }(),
         // []() { return buildString({"select nome where id="}, true, false); }(),
         // []() { return buildString({"select id where nome="}, false, false); }(),
