@@ -5,6 +5,7 @@
 #include <sstream>
 #include <vector>
 #include <cstdlib>
+#include <ctime>
 #include "Names.h"
 using namespace std;
 
@@ -21,7 +22,7 @@ class Client {
                                                     fdWrite(fdWrite), 
                                                     clientId(clientId) {}
 
-    void start(bool userInput=false, string userMessage=NULL) {
+    void start(bool userInput=false, string userMessage="") {
         for(int i = 0; i < rand() % REQ_MAX; i++){
             if(!userInput){
                 // clientResponse(fdRead);

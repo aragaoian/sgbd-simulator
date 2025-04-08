@@ -12,13 +12,13 @@ struct PipeConnection {
 };
 
 int main(int argc, char *argv[]) {
-    int serverFd[2];
-    int clientFd[2];
-    // fd[0] -> leitura
-    // fd[1] -> escrita
+    
+    PipeConnection serverPipe;
+    PipeConnection clientPipe;
     pid_t pid;
+    srand(time(NULL));
 
-    if (pipe(serverFd) == -1 || pipe(clientFd) == -1) {
+    if (pipe((int*)&serverPipe) == -1 || pipe((int*)&clientPipe) == -1) {
         perror("pipe");
         return 1;
     }
@@ -29,17 +29,30 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
+    // if (pid != 0) { // pFilho
+    //     cout << "Server started" << endl;
+    //     close(serverPipe.writeFd);
+    //     Server server(serverPipe.readFd, clientPipe.writeFd);
+    //     server.start();
+    //     close(serverPipe.readFd);
+    // } else { // pPai
+    //     close(clientPipe.writeFd);
+    //     Client client(clientPipe.readFd, serverPipe.writeFd, pid);
+    //     client.start();
+    //     close(clientPipe.readFd);
+    // }
+    
     if (pid != 0) { // pFilho
         cout << "Server started" << endl;
-        close(serverFd[1]);
-        Server server(serverFd[0], clientFd[1]);
+        close(serverPipe.writeFd);
+        Server server(serverPipe.readFd, serverPipe.writeFd);
         server.start();
-        close(serverFd[0]);
+        close(serverPipe.readFd);
     } else { // pPai
-        close(clientFd[1]);
-        Client client(clientFd[0], serverFd[1], pid);
+        close(serverPipe.readFd);
+        Client client(serverPipe.readFd, serverPipe.writeFd, pid);
         client.start();
-        close(clientFd[0]);
+        close(serverPipe.writeFd);
     }
 
     return 0;
