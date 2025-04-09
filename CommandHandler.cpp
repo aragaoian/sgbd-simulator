@@ -20,7 +20,7 @@ class CommandHandler {
     unordered_map<string, CommandFunction> commands = {
         {"insert", insert_cmd},
         // {"delete", delete_cmd},
-        // {"update", update_cmd},
+        {"update", update_cmd},
         // {"select", select_cmd},
         // {"select_all", select_all_cmd},
         // {"help", help_cmd},

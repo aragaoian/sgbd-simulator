@@ -22,7 +22,10 @@ class Client {
 
     void start() {
         // clientResponse(fdRead);
-        sendMessage(fdWrite, commandList[commandId]);
+        // sendMessage(fdWrite, "insert id=1 nome='Duda'");
+        // sendMessage(fdWrite, "insert id=2 nome='Ian'");
+        // sendMessage(fdWrite, "insert id=3 nome='Lucas'");
+        sendMessage(fdWrite, "update nome='duda' where id=1");
     }
 
     static string buildString(const vector <string> &prefix, bool isNumber, bool isBoth) {

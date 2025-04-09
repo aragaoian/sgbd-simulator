@@ -16,6 +16,8 @@ string insert_cmd(int argc, vector<Arg> &argv) {
     int id = stoi(argv[1].value);
     string nome = argv[2].value;
     Registro record;
+
+    
     record.id = id;
     record.nome = nome;
     return db.insertRecord(record);
@@ -30,16 +32,14 @@ string delete_cmd(int argc, vector<Arg> &argv) {
     // return db.deleteRecord(record);
 }
 
-// string update_cmd(int argc, vector<Arg> &argv) {
-// {
-//     if (argc != 3)
-//     {
-//         return "Usage: update <old_record> <new_record>\n";
-//     }
-//     string oldRecord = argv[1];
-//     string newRecord = argv[2];
-//     return db.updateRecord(oldRecord, newRecord);
-// }
+string update_cmd(int argc, vector<Arg> &argv) {
+
+    if (argc != 2 && (argc != 4 || argv[2].name != "where")) {
+        return "Usage: update nome=<name> or update nome=<name> where id=<id>\n";
+    }
+    
+    return db.updateRecord(argv[1], argc == 4 ? argv[3] : Arg{});
+}
 
 // string select_cmd(int argc, vector<Arg> &argv) {
 // {

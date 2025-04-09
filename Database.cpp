@@ -94,25 +94,25 @@ class Database {
         return "Record not found\n";
     }
 
-    // string updateRecord(const string &oldRecord, const string &newRecord)
-    // {
-    //     string result;
-    //     pthread_mutex_lock(&dbMutex);
-    //     auto it = find(records.begin(), records.end(), oldRecord);
-    //     if (it != records.end())
-    //     {
-    //         *it = newRecord;
-    //         saveToFile();
-    //         pthread_mutex_unlock(&dbMutex);
-    //         result = "Record updated successfully\n";
-    //     }
-    //     else
-    //     {
-    //         result = "Record not found\n";
-    //     }
-    //     pthread_mutex_unlock(&dbMutex);
-    //     return result;
-    // }
+    string updateRecord(const Arg &field, const Arg &where)
+    {
+        //bool found = false;
+            for (auto &record : records)
+            {
+                if(where.name == "id"){
+                    int id = stoi(where.value); // converte o id para inteiro
+                    if (record.id == id)
+                    {
+                        record.nome = field.value;
+                    }
+                }else{
+                    record.nome = field.value;
+                }
+            }
+
+            saveToFile();
+            return "Record updated successfully\n";
+    }
 
     // string selectRecord(const Arg &arg)
     // {
