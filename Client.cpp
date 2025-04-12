@@ -1,11 +1,11 @@
-#include <iostream>
-#include <string.h>
-#include <unistd.h>
-#include <string>
-#include <sstream>
-#include <vector>
-#include <cstdlib>
 #include "Names.h"
+#include <cstdlib>
+#include <iostream>
+#include <sstream>
+#include <string.h>
+#include <string>
+#include <unistd.h>
+#include <vector>
 using namespace std;
 
 #define BUFFER_SIZE 1500
@@ -13,22 +13,22 @@ using namespace std;
 #define COLUMN_MAX 2
 #define VALUE_MAX 100
 
-
 class Client {
   public:
-    Client(int fdRead, int fdWrite, int clientId) : fdRead(fdRead), 
-                                                    fdWrite(fdWrite), 
-                                                    clientId(clientId) {}
+    Client(int fdRead, int fdWrite, int clientId) : fdRead(fdRead), fdWrite(fdWrite), clientId(clientId) {}
 
     void start() {
         // clientResponse(fdRead);
-        // sendMessage(fdWrite, "insert id=1 nome='Duda'");
-        // sendMessage(fdWrite, "insert id=2 nome='Ian'");
-        // sendMessage(fdWrite, "insert id=3 nome='Lucas'");
+
+        sendMessage(fdWrite, "insert id=2 nome='Ian'");
+        sendMessage(fdWrite, "insert id=3 nome='Lucas'");
         sendMessage(fdWrite, "update nome='duda' where id=1");
+        sendMessage(fdWrite, "select nome id");
+        sendMessage(fdWrite, "delete");
+        sendMessage(fdWrite, "select nome id");
     }
 
-    static string buildString(const vector <string> &prefix, bool isNumber, bool isBoth) {
+    static string buildString(const vector<string> &prefix, bool isNumber, bool isBoth) {
 
         /*
         Parameters:
@@ -40,18 +40,18 @@ class Client {
         std::stringstream ss;
         string id = to_string(rand() % VALUE_MAX);
         string name = namesArray[rand() % VALUE_MAX];
-  
-        if(!isBoth){
+
+        if (!isBoth) {
             ss << prefix[0];
             if (isNumber) {
                 ss << id;
             } else {
                 ss << "'" << name << "'";
             }
-        }else{
+        } else {
             ss << prefix[0] << id << prefix[1] << "'" << name << "'";
         }
-    
+
         return ss.str();
     }
 
@@ -59,10 +59,9 @@ class Client {
     int fdRead;
     int fdWrite;
     int clientId;
-    int commandId = rand() % (COMMAND_MAX-6);
+    int commandId = rand() % (COMMAND_MAX - 6);
     string commandList[COMMAND_MAX] = {
-        "SELECT * FROM Table",
-        []() { return buildString({"insert id=", " nome="}, false, true); }(),
+        "SELECT * FROM Table", []() { return buildString({"insert id=", " nome="}, false, true); }(),
         // []() { return buildString({"select nome where id="}, true, false); }(),
         // []() { return buildString({"select id where nome="}, false, false); }(),
         // []() { return buildString({"delete where nome="}, false, false); }(),
@@ -77,7 +76,5 @@ class Client {
         write(fd, message.c_str(), len); // envia a mensagem
     }
 
-    void clientResponse(int fd){
-        return;
-    }
+    void clientResponse(int fd) { return; }
 };

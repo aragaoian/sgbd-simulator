@@ -1,3 +1,4 @@
+#include "BinaryTree.cpp"
 #include "types.h"
 #include <algorithm>
 #include <fstream>
@@ -23,11 +24,15 @@ vector<string> splitString(const string &str, char delimiter) {
 
 class Database {
   private:
+    BST tree;
     vector<Registro> records;
     pthread_mutex_t dbMutex;
+    pthread_mutex_t fileMutex;
     const string filename = "database.db";
+    int operationsCount = 0;
 
     void loadFromFile() {
+        pthread_mutex_lock(&fileMutex);
         ifstream file(filename);
         if (!file.is_open()) {
             cerr << "Error opening file: " << filename << "\n";
@@ -47,90 +52,149 @@ class Database {
             record.id = stoi(fields[0]);
             record.nome = fields[1];
             records.push_back(record);
+            tree.insert(record.id);
         }
         file.close();
+        pthread_mutex_unlock(&fileMutex);
     }
 
-    void saveToFile() {
+    void saveToFile(bool force) {
+        if (!force) {
+            return;
+        }
+        operationsCount = 0;
+        pthread_mutex_lock(&fileMutex);
         ofstream file(filename, ios::trunc);
         for (const auto &record : records) {
             file << record.id << "," << record.nome << "\n";
         }
         file.close();
+        pthread_mutex_unlock(&fileMutex);
     }
 
   public:
     Database() {
         pthread_mutex_init(&dbMutex, NULL);
+        pthread_mutex_init(&fileMutex, NULL);
         loadFromFile();
     }
 
-    ~Database() { pthread_mutex_destroy(&dbMutex); }
+    ~Database() {
+        saveToFile(true);
+        pthread_mutex_destroy(&dbMutex);
+        pthread_mutex_destroy(&fileMutex);
+    }
 
     string insertRecord(const Registro &registro) {
         pthread_mutex_lock(&dbMutex);
-        auto it = find_if(records.begin(), records.end(), [registro](const Registro &record) { return record.id == registro.id; });
-        if (it != records.end()) {
+
+        // Check for duplicate ID
+        bool inserted = tree.insert(registro.id);
+        if (!inserted) {
             pthread_mutex_unlock(&dbMutex);
             return "Error: Duplicate ID\n";
         }
 
         records.push_back(registro);
-        saveToFile();
         pthread_mutex_unlock(&dbMutex);
+        saveToFile(false);
         return "Record inserted successfully\n";
     }
 
-    string deleteRecord(const int id) {
+    string deleteRecord(const Arg &where) {
         pthread_mutex_lock(&dbMutex);
-        auto it = find_if(records.begin(), records.end(), [id](const Registro &record) { return record.id == id; });
-        if (it != records.end()) {
-            records.erase(it, records.end());
-            saveToFile();
+
+        if (where.name.empty()) {
+            int numRecords = records.size();
+            records.clear();
+            tree.clear();
             pthread_mutex_unlock(&dbMutex);
-            return "Record deleted successfully\n";
+            saveToFile(false);
+            return "All records deleted successfully\n";
+        }
+
+        auto it = find_if(records.begin(), records.end(), [where](const Registro &record) {
+            if (where.name == "id") {
+                int id = stoi(where.value); // converte o id para inteiro
+                return record.id == id;
+            } else if (where.name == "nome") {
+                return record.nome == where.value;
+            }
+            return false;
+        });
+
+        if (it != records.end()) {
+            tree.remove(it->id);
+            records.erase(it, records.end());
+            pthread_mutex_unlock(&dbMutex);
+            saveToFile(false);
+            return "Record(s) deleted successfully\n";
         }
         pthread_mutex_unlock(&dbMutex);
-        return "Record not found\n";
+        return "No records found to delete\n";
     }
 
-    string updateRecord(const Arg &field, const Arg &where)
-    {
-        //bool found = false;
-            for (auto &record : records)
-            {
-                if(where.name == "id"){
-                    int id = stoi(where.value); // converte o id para inteiro
-                    if (record.id == id)
-                    {
-                        record.nome = field.value;
-                    }
-                }else{
+    string updateRecord(const Arg &field, const Arg &where) {
+        pthread_mutex_lock(&dbMutex);
+
+        for (auto &record : records) {
+            if (where.name == "id") {
+                int id = stoi(where.value); // converte o id para inteiro
+                if (record.id == id) {
                     record.nome = field.value;
                 }
+            } else {
+                record.nome = field.value;
             }
+        }
+        pthread_mutex_unlock(&dbMutex);
 
-            saveToFile();
-            return "Record updated successfully\n";
+        saveToFile(false);
+        return "Record(s) updated successfully\n";
     }
 
-    // string selectRecord(const Arg &arg)
-    // {
-    //     pthread_mutex_lock(&dbMutex);
-    //     auto it = find(records.begin(), records.end(), record);
-    //     pthread_mutex_unlock(&dbMutex);
-    //     return (it != records.end()) ? "Record found: " + *it + "\n" : "Record not found\n";
-    // }
+    string selectRecord(const vector<Arg> &fields, const Arg &where) {
+        pthread_mutex_lock(&dbMutex);
+        vector<Registro> result;
 
-    // string selectAllRecords()
-    // {
-    //     pthread_mutex_lock(&dbMutex);
-    //     string result;
-    //     for (const auto &record : records)
-    //     {
-    //         result += record + "\n";
-    //     }
-    //     pthread_mutex_unlock(&dbMutex);
-    //     return result.empty() ? "No records found\n" : result;
-    // }
+        for (const auto &record : records) {
+            if (!where.name.empty()) {
+                if (where.name == "id") {
+                    int id = stoi(where.value); // converte o id para inteiro
+                    if (record.id == id) {
+                        result.push_back(record);
+                    }
+                } else if (where.name == "nome") {
+                    if (record.nome == where.value) {
+                        result.push_back(record);
+                    }
+                }
+            } else {
+                result.push_back(record);
+            }
+        }
+        pthread_mutex_unlock(&dbMutex);
+
+        string resultStrCSV;
+
+        for (const auto &record : result) {
+            // whe need to check the fields to be printed
+            string line;
+            for (const auto &field : fields) {
+                if (field.name == "id") {
+                    line += to_string(record.id) + ",";
+                } else if (field.name == "nome") {
+                    line += record.nome + ",";
+                }
+            }
+            if (!line.empty()) {
+                line.pop_back(); // remove the last comma
+            }
+            resultStrCSV += line + "\n";
+        }
+        if (resultStrCSV.empty()) {
+            return "No records found\n";
+        }
+        return resultStrCSV;
+    }
 };

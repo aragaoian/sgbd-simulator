@@ -7,7 +7,7 @@
 #include <vector>
 using namespace std;
 
-#define MAX_THREADS 16
+#define MAX_THREADS 50
 #define BUFFER_SIZE 1500
 #define MAX_ARGS 10
 
@@ -69,7 +69,6 @@ class Server {
         pthread_cond_init(&newTaskCondition, NULL);
 
         for (int i = 0; i < MAX_THREADS; ++i) {
-            cout << "Creating thread " << i << endl;
             threadPool[i] = thread(&Server::worker, this);
         }
     }
@@ -81,7 +80,6 @@ class Server {
         pthread_mutex_unlock(&queueMutex);
 
         for (int i = 0; i < MAX_THREADS; ++i) {
-            cout << "Joining thread " << i << endl;
             threadPool[i].join();
         }
         pthread_mutex_destroy(&logMutex);
@@ -160,11 +158,8 @@ class Server {
             queue.erase(queue.begin());
             pthread_mutex_unlock(&queueMutex);
 
-            string msg = "Processing task: " + string(task.buffer) + " on thread " + to_string(pthread_self());
-            if (string(task.buffer) == "insert id=1 nome='Ian'") {
-                sleep(4);
-            }
-            cout << msg << endl;
+            // string msg = "Processing task: " + string(task.buffer) + " on thread " + to_string(pthread_self()) + "\n";
+            // cout << msg;
 
             handleClient(task.buffer);
         }
@@ -180,18 +175,18 @@ class Server {
 
         string response = commandHandler.executeCommand(args[0].name, args.size(), args);
 
-        time_t now = time(NULL);                                            // get current time
-        tm *ltm = localtime(&now);                                          // convert to local time
-        char timeBuffer[80];                                                // buffer for time string
-        strftime(timeBuffer, sizeof(timeBuffer), "%Y-%m-%d %H:%M:%S", ltm); // format time
-        string timeString(timeBuffer);                                      // convert to string
+        // time_t now = time(NULL);                                            // get current time
+        // tm *ltm = localtime(&now);                                          // convert to local time
+        // char timeBuffer[80];                                                // buffer for time string
+        // strftime(timeBuffer, sizeof(timeBuffer), "%Y-%m-%d %H:%M:%S", ltm); // format time
+        // string timeString(timeBuffer);                                      // convert to string
 
-        // put response in log.txt
-        pthread_mutex_lock(&logMutex);
-        ofstream logFile("log.txt", ios::app);
-        logFile << timeString << " - " << command << ": " << response;
-        logFile.close();
-        pthread_mutex_unlock(&logMutex);
+        // // put response in log.txt
+        // pthread_mutex_lock(&logMutex);
+        // ofstream logFile("log.txt", ios::app);
+        // logFile << timeString << " - " << command << ": " << response;
+        // logFile.close();
+        // pthread_mutex_unlock(&logMutex);
         return NULL;
     }
 };
