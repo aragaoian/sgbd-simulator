@@ -1,4 +1,5 @@
 #include "CommandHandler.cpp"
+#include "types.h"
 #include <iostream>
 #include <netinet/in.h>
 #include <string.h>
@@ -7,8 +8,7 @@
 #include <vector>
 using namespace std;
 
-#define MAX_THREADS 50
-#define BUFFER_SIZE 1500
+#define MAX_THREADS 16
 #define MAX_ARGS 10
 
 vector<Arg> tokenize(const string &buf) {
@@ -57,13 +57,9 @@ vector<Arg> tokenize(const string &buf) {
     return args;
 }
 
-typedef struct {
-    char buffer[BUFFER_SIZE];
-} Task;
-
 class Server {
   public:
-    Server(int fdRead) : fdRead(fdRead) {
+    Server(int fdRead, int fdWrite) : fdRead(fdRead), fdWrite(fdWrite) {
         pthread_mutex_init(&logMutex, NULL);
         pthread_mutex_init(&queueMutex, NULL);
         pthread_cond_init(&newTaskCondition, NULL);
@@ -93,16 +89,16 @@ class Server {
             int len = 0;                                 // tamanho da mensagem
             ssize_t n = read(fdRead, &len, sizeof(int)); // lê o tamanho da próxima mensagem
             if (n < 0) {
-                perror("Error reading message size");
+                perror("Server: Error reading message size");
                 break;
             }
             if (n == 0) {
-                cout << "Client disconnected" << endl;
+                cout << "Server: Client disconnected" << endl;
                 break;
             }
 
             if (len <= 0 || len >= BUFFER_SIZE) {
-                cerr << "Invalid message length: " << len << endl;
+                cerr << "Server: Invalid message length: " << len << endl;
                 continue;
             }
 
@@ -112,7 +108,7 @@ class Server {
                 // buffer aponta para o inicio da mensagem, estamos tamanho - lido bytes a partir de inicio + lido
                 ssize_t bytesRead = read(fdRead, buffer + totalRead, len - totalRead);
                 if (bytesRead <= 0) {
-                    perror("Error reading message body");
+                    perror("Server: Error reading message body");
                     break;
                 }
                 totalRead += bytesRead;
@@ -134,9 +130,11 @@ class Server {
     thread threadPool[MAX_THREADS];
     CommandHandler commandHandler;
     int fdRead;
-    pthread_mutex_t logMutex;
-    pthread_mutex_t queueMutex;
-    pthread_cond_t newTaskCondition;
+    int fdWrite;
+    pthread_mutex_t writeMutex = PTHREAD_MUTEX_INITIALIZER;
+    pthread_mutex_t logMutex = PTHREAD_MUTEX_INITIALIZER;
+    pthread_mutex_t queueMutex = PTHREAD_MUTEX_INITIALIZER;
+    pthread_cond_t newTaskCondition = PTHREAD_COND_INITIALIZER;
     vector<Task> queue;
     bool isShuttingDown = false;
 
@@ -167,6 +165,8 @@ class Server {
         return NULL;
     }
 
+    string formatResponse(string name, int argc, vector<Arg> &argv) { return " "; }
+
     void *handleClient(char *buffer) {
         string command(buffer);
         vector<Arg> args = tokenize(buffer);
@@ -174,6 +174,11 @@ class Server {
         if (args.empty()) return NULL;
 
         string response = commandHandler.executeCommand(args[0].name, args.size(), args);
+        int len = response.length();
+        pthread_mutex_lock(&writeMutex);
+        write(fdWrite, &len, sizeof(int));
+        write(fdWrite, response.c_str(), len);
+        pthread_mutex_unlock(&writeMutex);
 
         // time_t now = time(NULL);                                            // get current time
         // tm *ltm = localtime(&now);                                          // convert to local time

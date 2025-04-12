@@ -1,25 +1,21 @@
 #include "Server.cpp"
 #include "Client.cpp"
+#include "types.h"
 #include <iostream>
+using namespace std;
 
 // Os clients devem mandar as mensagens automaticamente (seria legal se fosse aleatoriamente) - Ian
 // Implementar delete, update, select, select_all - Duda
 
-using namespace std;
-
-void sendMessage(int fd, const string &message) {
-    int len = message.size();
-    write(fd, &len, sizeof(int));    // envia o tamanho
-    write(fd, message.c_str(), len); // envia a mensagem
-}
 
 int main(int argc, char *argv[]) {
-    int fd[2];
-    // fd[0] -> leitura
-    // fd[1] -> escrita
+    
+    PipeConnection serverPipe;
+    PipeConnection clientPipe;
     pid_t pid;
+    srand(time(NULL));
 
-    if (pipe(fd) == -1) {
+    if (pipe((int*)&serverPipe) == -1 || pipe((int*)&clientPipe) == -1) {
         perror("pipe");
         return 1;
     }
@@ -32,16 +28,28 @@ int main(int argc, char *argv[]) {
 
     if (pid != 0) { // pFilho
         cout << "Server started" << endl;
-        close(fd[1]);
-        Server server(fd[0]);
+        close(serverPipe.writeFd);
+        Server server(serverPipe.readFd, clientPipe.writeFd);
         server.start();
-        close(fd[0]);
+        close(serverPipe.readFd);
     } else { // pPai
-        close(fd[0]);
-        Client client(fd[0], fd[1], pid);
+        close(clientPipe.writeFd);
+        Client client(clientPipe.readFd, serverPipe.writeFd);
         client.start();
-        close(fd[1]);
     }
+    
+    // if (pid != 0) { // pFilho
+    //     cout << "Server started" << endl;
+    //     close(serverPipe.writeFd);
+    //     Server server(serverPipe.readFd, serverPipe.writeFd);
+    //     server.start();
+    //     close(serverPipe.readFd);
+    // } else { // pPai
+    //     close(serverPipe.readFd);
+    //     Client client(serverPipe.readFd, serverPipe.writeFd);
+    //     client.start();
+    //     close(serverPipe.writeFd);
+    // }
 
     return 0;
 }
