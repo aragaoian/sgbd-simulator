@@ -175,9 +175,9 @@ class Database {
         }
         pthread_mutex_unlock(&dbMutex);
 
-        if(result.empty()) return "No records found\n";
+        if (result.empty()) return "No records found\n";
 
-        string resultStrCSV;
+        string resultStrTable;
         bool hasId = false;
         bool hasNome = false;
         for (const auto &field : fields) { // verifica os campos do select
@@ -187,19 +187,19 @@ class Database {
                 hasNome = true;
             }
         }
-        
+
         if (hasId && hasNome) {
-            resultStrCSV += "\n+---------+-----------------------------+\n";
-            resultStrCSV += "|   ID    |             Nome            |\n";
-            resultStrCSV += "+---------+-----------------------------+\n";
+            resultStrTable += "\n+---------+-----------------------------+\n";
+            resultStrTable += "|   ID    |             Nome            |\n";
+            resultStrTable += "+---------+-----------------------------+\n";
         } else if (hasId) {
-            resultStrCSV += "\n+---------+\n";
-            resultStrCSV += "|   ID    |\n";
-            resultStrCSV += "+---------+\n";
+            resultStrTable += "\n+---------+\n";
+            resultStrTable += "|   ID    |\n";
+            resultStrTable += "+---------+\n";
         } else if (hasNome) {
-            resultStrCSV += "\n+-----------------------------+\n";
-            resultStrCSV += "|             Nome            |\n";
-            resultStrCSV += "+-----------------------------+\n";
+            resultStrTable += "\n+-----------------------------+\n";
+            resultStrTable += "|             Nome            |\n";
+            resultStrTable += "+-----------------------------+\n";
         } else {
             return "No fields to display\n";
         }
@@ -207,39 +207,39 @@ class Database {
         for (const auto &record : result) {
             if (hasId && hasNome) {
                 string idStr = to_string(record.id);
-                string idPadded = string(4 - idStr.length()/2, ' ') + idStr + string(4 - idStr.length()/2, ' ');
+                string idPadded = string(4 - idStr.length() / 2, ' ') + idStr + string(4 - idStr.length() / 2, ' ');
                 if (idStr.length() % 2 == 0) idPadded += " ";
-                
+
                 string namePadded = record.nome;
                 int nameSpace = 29 - namePadded.length();
                 int leftPad = nameSpace / 2;
                 int rightPad = nameSpace - leftPad;
                 namePadded = string(leftPad, ' ') + namePadded + string(rightPad, ' ');
-                
-                resultStrCSV += "|" + idPadded + "|" + namePadded + "|\n";
+
+                resultStrTable += "|" + idPadded + "|" + namePadded + "|\n";
             } else if (hasId) {
                 string idStr = to_string(record.id);
-                string idPadded = string(4 - idStr.length()/2, ' ') + idStr + string(4 - idStr.length()/2, ' ');
+                string idPadded = string(4 - idStr.length() / 2, ' ') + idStr + string(4 - idStr.length() / 2, ' ');
                 if (idStr.length() % 2 == 0) idPadded += " ";
-                resultStrCSV += "|" + idPadded + "|\n";
+                resultStrTable += "|" + idPadded + "|\n";
             } else if (hasNome) {
                 string namePadded = record.nome;
                 int nameSpace = 29 - namePadded.length();
                 int leftPad = nameSpace / 2;
                 int rightPad = nameSpace - leftPad;
                 namePadded = string(leftPad, ' ') + namePadded + string(rightPad, ' ');
-                resultStrCSV += "|" + namePadded + "|\n";
+                resultStrTable += "|" + namePadded + "|\n";
             }
         }
-        
+
         if (hasId && hasNome) {
-            resultStrCSV += "+---------+-----------------------------+\n";
+            resultStrTable += "+---------+-----------------------------+\n";
         } else if (hasId) {
-            resultStrCSV += "+---------+\n";
+            resultStrTable += "+---------+\n";
         } else if (hasNome) {
-            resultStrCSV += "+-----------------------------+\n";
+            resultStrTable += "+-----------------------------+\n";
         }
-        
-        return resultStrCSV;
+
+        return resultStrTable;
     }
 };
