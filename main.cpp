@@ -9,6 +9,21 @@ using namespace std;
 
 int main(int argc, char *argv[]) {
 
+    system("clear");
+    cout << "M1 Sistemas Operacionais\n";
+    cout << "Professor: Felipe Viel\n";
+    cout << "Alunos: Ian Callegari Aragão, Lucas Losekann Rosa e Maria Eduarda Alves Martim\n";
+    if (argc == 1) {
+        cout << "Opção - Requições aleatórias\n";
+    } else if (argc > 1) {
+        cout << "Opção - Requições do usuário\n";
+    } else {
+        cout << "Error: Insuficient arguments\n";
+        return 0;
+    }
+    cout << "\nPressione Enter para continuar...";
+    cin.ignore();
+
     PipeConnection serverPipe;
     PipeConnection clientPipe;
     pid_t pid;
@@ -40,19 +55,6 @@ int main(int argc, char *argv[]) {
             client.start();
         }
     }
-
-    // if (pid != 0) { // pFilho
-    //     cout << "Server started" << endl;
-    //     close(serverPipe.writeFd);
-    //     Server server(serverPipe.readFd, serverPipe.writeFd);
-    //     server.start();
-    //     close(serverPipe.readFd);
-    // } else { // pPai
-    //     close(serverPipe.readFd);
-    //     Client client(serverPipe.readFd, serverPipe.writeFd);
-    //     client.start();
-    //     close(serverPipe.writeFd);
-    // }
 
     return 0;
 }

@@ -175,26 +175,71 @@ class Database {
         }
         pthread_mutex_unlock(&dbMutex);
 
+        if(result.empty()) return "No records found\n";
+
         string resultStrCSV;
+        bool hasId = false;
+        bool hasNome = false;
+        for (const auto &field : fields) { // verifica os campos do select
+            if (field.name == "id") {
+                hasId = true;
+            } else if (field.name == "nome") {
+                hasNome = true;
+            }
+        }
+        
+        if (hasId && hasNome) {
+            resultStrCSV += "\n+---------+-----------------------------+\n";
+            resultStrCSV += "|   ID    |             Nome            |\n";
+            resultStrCSV += "+---------+-----------------------------+\n";
+        } else if (hasId) {
+            resultStrCSV += "\n+---------+\n";
+            resultStrCSV += "|   ID    |\n";
+            resultStrCSV += "+---------+\n";
+        } else if (hasNome) {
+            resultStrCSV += "\n+-----------------------------+\n";
+            resultStrCSV += "|             Nome            |\n";
+            resultStrCSV += "+-----------------------------+\n";
+        } else {
+            return "No fields to display\n";
+        }
 
         for (const auto &record : result) {
-            // whe need to check the fields to be printed
-            string line;
-            for (const auto &field : fields) {
-                if (field.name == "id") {
-                    line += to_string(record.id) + ",";
-                } else if (field.name == "nome") {
-                    line += record.nome + ",";
-                }
+            if (hasId && hasNome) {
+                string idStr = to_string(record.id);
+                string idPadded = string(4 - idStr.length()/2, ' ') + idStr + string(4 - idStr.length()/2, ' ');
+                if (idStr.length() % 2 == 0) idPadded += " ";
+                
+                string namePadded = record.nome;
+                int nameSpace = 29 - namePadded.length();
+                int leftPad = nameSpace / 2;
+                int rightPad = nameSpace - leftPad;
+                namePadded = string(leftPad, ' ') + namePadded + string(rightPad, ' ');
+                
+                resultStrCSV += "|" + idPadded + "|" + namePadded + "|\n";
+            } else if (hasId) {
+                string idStr = to_string(record.id);
+                string idPadded = string(4 - idStr.length()/2, ' ') + idStr + string(4 - idStr.length()/2, ' ');
+                if (idStr.length() % 2 == 0) idPadded += " ";
+                resultStrCSV += "|" + idPadded + "|\n";
+            } else if (hasNome) {
+                string namePadded = record.nome;
+                int nameSpace = 29 - namePadded.length();
+                int leftPad = nameSpace / 2;
+                int rightPad = nameSpace - leftPad;
+                namePadded = string(leftPad, ' ') + namePadded + string(rightPad, ' ');
+                resultStrCSV += "|" + namePadded + "|\n";
             }
-            if (!line.empty()) {
-                line.pop_back(); // remove the last comma
-            }
-            resultStrCSV += line + "\n";
         }
-        if (resultStrCSV.empty()) {
-            return "No records found\n";
+        
+        if (hasId && hasNome) {
+            resultStrCSV += "+---------+-----------------------------+\n";
+        } else if (hasId) {
+            resultStrCSV += "+---------+\n";
+        } else if (hasNome) {
+            resultStrCSV += "+-----------------------------+\n";
         }
+        
         return resultStrCSV;
     }
 };

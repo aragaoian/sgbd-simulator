@@ -36,7 +36,7 @@ class Client {
         if (!userInput) {
             for (int i = 0; i < reqMax; i++) {
 
-                sendMessage(commandList[commandId]());
+                sendMessage(commandList[rand() % (COMMAND_MAX)]());
             }
             while (resCount != reqMax) {
             }
@@ -80,7 +80,6 @@ class Client {
     int fdWrite;
     int reqMax = rand() % REQ_MAX + 1;
     int resCount = 0;
-    int commandId = rand() % (COMMAND_MAX);
     using CommandFunction = string (*)();
     CommandFunction commandList[COMMAND_MAX] = {[]() { return string("select nome id"); },
                                                 []() { return buildString({"insert id=", " nome="}, false, true); },
@@ -88,8 +87,7 @@ class Client {
                                                 []() { return buildString({"select id where nome="}, false, false); },
                                                 []() { return buildString({"delete where nome="}, false, false); },
                                                 []() { return buildString({"delete where id="}, true, false); },
-                                                []() { return buildString({"update nome="}, false, false); },
-                                                []() { return buildString({"update id="}, true, false); }};
+                                                []() { return buildString({"update nome="}, false, false); }};
 
     void *serverResponse() {
 
