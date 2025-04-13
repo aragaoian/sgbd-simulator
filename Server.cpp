@@ -1,4 +1,5 @@
 #include "CommandHandler.cpp"
+#include "Utils.cpp"
 #include "types.h"
 #include <iostream>
 #include <netinet/in.h>
@@ -6,6 +7,7 @@
 #include <thread>
 #include <unistd.h>
 #include <vector>
+
 using namespace std;
 
 #define MAX_THREADS 16
@@ -86,35 +88,16 @@ class Server {
     void start() {
 
         while (1) {
-            int len = 0;                                 // tamanho da mensagem
-            ssize_t n = read(fdRead, &len, sizeof(int)); // lê o tamanho da próxima mensagem
-            if (n < 0) {
-                perror("Server: Error reading message size");
+            pair<string, int> result = readPipeMessage(fdRead, "Server");
+            if (result.second == 1) {
                 break;
             }
-            if (n == 0) {
-                cout << "Server: Client disconnected" << endl;
-                break;
-            }
-
-            if (len <= 0 || len >= BUFFER_SIZE) {
-                cerr << "Server: Invalid message length: " << len << endl;
+            if (result.second == 2) {
                 continue;
             }
-
-            char buffer[BUFFER_SIZE];
-            ssize_t totalRead = 0;
-            while (totalRead < len) {
-                // buffer aponta para o inicio da mensagem, estamos tamanho - lido bytes a partir de inicio + lido
-                ssize_t bytesRead = read(fdRead, buffer + totalRead, len - totalRead);
-                if (bytesRead <= 0) {
-                    perror("Server: Error reading message body");
-                    break;
-                }
-                totalRead += bytesRead;
-            }
-
-            buffer[len] = '\0';
+            char *buffer = new char[result.first.length() + 1];
+            strncpy(buffer, result.first.c_str(), result.first.length());
+            buffer[result.first.length()] = '\0'; // The length method does not include the null terminator
 
             pthread_mutex_lock(&queueMutex);
             Task task;
@@ -176,22 +159,9 @@ class Server {
         string response = commandHandler.executeCommand(args[0].name, args.size(), args);
         int len = response.length();
         pthread_mutex_lock(&writeMutex);
-        write(fdWrite, &len, sizeof(int));
-        write(fdWrite, response.c_str(), len);
+        writePipeMessage(fdWrite, response);
         pthread_mutex_unlock(&writeMutex);
 
-        // time_t now = time(NULL);                                            // get current time
-        // tm *ltm = localtime(&now);                                          // convert to local time
-        // char timeBuffer[80];                                                // buffer for time string
-        // strftime(timeBuffer, sizeof(timeBuffer), "%Y-%m-%d %H:%M:%S", ltm); // format time
-        // string timeString(timeBuffer);                                      // convert to string
-
-        // // put response in log.txt
-        // pthread_mutex_lock(&logMutex);
-        // ofstream logFile("log.txt", ios::app);
-        // logFile << timeString << " - " << command << ": " << response;
-        // logFile.close();
-        // pthread_mutex_unlock(&logMutex);
         return NULL;
     }
 };

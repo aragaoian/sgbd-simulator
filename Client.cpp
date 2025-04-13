@@ -1,4 +1,5 @@
 #include "Names.h"
+#include "Utils.cpp"
 #include <cstdlib>
 #include <ctime>
 #include <iostream>
@@ -32,14 +33,17 @@ class Client {
     }
 
     void start(bool userInput = false, string userMessage = "") {
-        for (int i = 0; i < reqMax; i++) {
-            if (!userInput) {
+        if (!userInput) {
+            for (int i = 0; i < reqMax; i++) {
+
                 sendMessage(commandList[commandId]());
-            } else {
-                sendMessage(userMessage);
             }
-        }
-        while (resCount != 0) {
+            while (resCount != reqMax) {
+            }
+        } else {
+            sendMessage(userMessage);
+            while (resCount != 1) {
+            }
         }
     }
 
@@ -75,7 +79,7 @@ class Client {
     int fdRead;
     int fdWrite;
     int reqMax = rand() % REQ_MAX + 1;
-    int resCount = reqMax;
+    int resCount = 0;
     int commandId = rand() % (COMMAND_MAX);
     using CommandFunction = string (*)();
     CommandFunction commandList[COMMAND_MAX] = {[]() { return string("select nome id"); },
@@ -91,44 +95,17 @@ class Client {
 
         while (1) {
 
-            int len = 0;
-            ssize_t n = read(fdRead, &len, sizeof(int)); // Lê o tamanho da mensagem
-            if (n <= 0) {                                // Verifica se houve erro ou se a conexão foi fechada
-                if (n == 0) {
-                    cout << "Client: Connection closed by server" << endl;
-                } else {
-                    perror("Client: Error reading message size from server");
-                }
+            pair<string, int> result = readPipeMessage(fdRead, "Client");
+            if (result.second == 1) {
                 break;
             }
-
-            if (n != sizeof(int)) { // Checagem para ver se excedeu o tamanho da mensagem
-                cout << "Client: Incomplete read of message size" << endl;
-                break;
+            if (result.second == 2) {
+                continue;
             }
 
-            char buffer[BUFFER_SIZE];
-            if (!buffer) {
-                perror("Client: Memory allocation failed");
-                break;
-            }
+            cout << "Server Response: " << result.first;
 
-            ssize_t totalRead = 0;
-            while (totalRead < len) { // leitura do buffer
-                // buffer + totalRead -> inicio + lugar que estamos
-                // len - totalRead -> quanto falta para o fim
-                ssize_t bytesRead = read(fdRead, buffer + totalRead, len - totalRead);
-                if (bytesRead <= 0) {
-                    perror("Client: Error reading message from Server");
-                    return NULL;
-                }
-                totalRead += bytesRead;
-            }
-
-            buffer[len] = '\0';
-            cout << "Server: " << buffer;
-
-            resCount--;
+            resCount++;
         }
 
         return NULL;
