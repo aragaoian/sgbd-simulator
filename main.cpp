@@ -4,9 +4,6 @@
 #include <iostream>
 using namespace std;
 
-// Os clients devem mandar as mensagens automaticamente (seria legal se fosse aleatoriamente) - Ian
-// Implementar delete, update, select, select_all - Duda
-
 int main(int argc, char *argv[]) {
 
     system("clear");
@@ -49,8 +46,8 @@ int main(int argc, char *argv[]) {
     } else { // pPai
         close(clientPipe.writeFd);
         Client client(clientPipe.readFd, serverPipe.writeFd);
-        if (argc == 2) {
-            client.start(true, argv[1]);
+        if (argc > 1) {
+            client.start(true, argc, argv);
         } else {
             client.start();
         }

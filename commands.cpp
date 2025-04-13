@@ -11,7 +11,7 @@ string insert_cmd(int argc, vector<Arg> &argv) {
         return "Usage: insert id=<id> nome='<nome>'\n";
     }
     if (argv[1].name != "id" || argv[2].name != "nome") {
-        return "Error: Invalid arguments\n";
+        return "Usage: insert id=<id> nome='<nome>'\n";
     }
     int id = stoi(argv[1].value);
     string nome = argv[2].value;

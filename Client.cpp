@@ -32,7 +32,7 @@ class Client {
         close(fdRead);
     }
 
-    void start(bool userInput = false, string userMessage = "") {
+    void start(bool userInput = false, int argc = 0, char *argv[] = NULL) {
         if (!userInput) {
             for (int i = 0; i < reqMax; i++) {
 
@@ -41,8 +41,10 @@ class Client {
             while (resCount != reqMax) {
             }
         } else {
-            sendMessage(userMessage);
-            while (resCount != 1) {
+            for (int i = 1; i < argc; i++) {
+                sendMessage(argv[i]);
+            }
+            while (resCount != argc - 1) {
             }
         }
     }
