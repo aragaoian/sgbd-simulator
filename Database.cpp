@@ -113,7 +113,7 @@ class Database {
             return "All records deleted successfully\n";
         }
 
-        auto it = find_if(records.begin(), records.end(), [where](const Registro &record) {
+        auto new_end = remove_if(records.begin(), records.end(), [where](const Registro &record) {
             if (where.name == "id") {
                 int id = stoi(where.value); // converte o id para inteiro
                 return record.id == id;
@@ -123,9 +123,11 @@ class Database {
             return false;
         });
 
-        if (it != records.end()) {
-            tree.remove(it->id);
-            records.erase(it, records.end());
+        if (new_end != records.end()) {
+            for (auto it = new_end; it != records.end(); ++it) {
+                tree.remove(it->id);
+            }
+            records.erase(new_end, records.end());
             pthread_mutex_unlock(&dbMutex);
             saveToFile(false);
             return "Record(s) deleted successfully\n";

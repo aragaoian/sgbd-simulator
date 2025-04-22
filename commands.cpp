@@ -27,7 +27,7 @@ string delete_cmd(int argc, vector<Arg> &argv) {
         return "Usage: delete or delete where id=<id>\n";
     }
 
-    return db.deleteRecord(argc == 3 ? argv[1] : Arg{});
+    return db.deleteRecord(argc == 3 ? argv[2] : Arg{});
 }
 
 string update_cmd(int argc, vector<Arg> &argv) {
